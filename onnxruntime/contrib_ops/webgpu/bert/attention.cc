@@ -159,6 +159,16 @@ Status AttentionProbsProgram::GenerateShaderCode(ShaderHelper& shader) const {
                             << "  let outputIdx = headOffset + (m + local_id.y) * uniforms.N + n + local_id.x;\n"
                             << "  var sum: f32 = " << (components_ == 4 ? "value.x + value.y + value.z + value.w" : (components_ == 2 ? "value.x + value.y" : "value")) << ";\n";
 
+  // Add causal masking for unidirectional attention
+  if (is_unidirectional_) {
+    shader.MainFunctionBody() << "  // Apply causal masking for unidirectional attention\n"
+                              << "  let query_pos = m + local_id.y + past_sequence_length;\n"
+                              << "  let key_pos = n + local_id.x;\n"
+                              << "  if (key_pos > query_pos) {\n"
+                              << "    sum = -3.40282e+38; // Set to very negative value for masking\n"
+                              << "  }\n";
+  }
+
   shader.MainFunctionBody() << "  output[outputIdx] = output_value_t(sum * uniforms.alpha)";
   if (has_attention_bias_) {
     shader.MainFunctionBody() << " + attention_bias[outputIdx]";
@@ -183,7 +193,7 @@ Status ComputeAttentionProbs(onnxruntime::webgpu::ComputeContext& context, int o
   const int components = parameters.head_size_ % 4 == 0 ? 4 : (parameters.head_size_ % 2 == 0 ? 2 : 1);
 
   AttentionProbsProgram program{"AttentionProbs", feed_past_key, has_present_key, has_attention_bias, tile_size,
-                                components, parameters.is_first_prompt_, seqlen_k != nullptr, parameters.past_present_share_buffer_};
+                                components, parameters.is_first_prompt_, seqlen_k != nullptr, parameters.past_present_share_buffer_, parameters.is_unidirectional_};
   program.AddInputs({{Q, ProgramTensorMetadataDependency::TypeAndRank, components},
                      {K, ProgramTensorMetadataDependency::TypeAndRank, components}});
   if (feed_past_key) {
