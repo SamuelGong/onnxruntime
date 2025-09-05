@@ -22,6 +22,7 @@ SCRIPT_DIR = Path(__file__).parent.resolve()
 ORT_ROOT = SCRIPT_DIR.parents[1]
 sys.path.append(str(ORT_ROOT / "tools" / "python"))
 
+print(sys.path)
 from util import parse_config  # noqa: E402
 from util.ort_format_model.operator_type_usage_processors import OpTypeImplFilterInterface  # noqa: E402
 

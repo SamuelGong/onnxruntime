@@ -1,49 +1,82 @@
-<p align="center"><img width="50%" src="docs/images/ONNX_Runtime_logo_dark.png" /></p>
+# Zhifeng's Guidance
 
-**ONNX Runtime is a cross-platform inference and training machine-learning accelerator**.
+[This](./README-original.md) is the original README for the LookOnceToHear project
 
-**ONNX Runtime inference** can enable faster customer experiences and lower costs, supporting models from deep learning frameworks such as PyTorch and TensorFlow/Keras as well as classical machine learning libraries such as scikit-learn, LightGBM, XGBoost, etc. ONNX Runtime is compatible with different hardware, drivers, and operating systems, and provides optimal performance by leveraging hardware accelerators where applicable alongside graph optimizations and transforms. [Learn more &rarr;](https://www.onnxruntime.ai/docs/#onnx-runtime-for-inferencing)
+## 1. Common Steps
 
-**ONNX Runtime training** can accelerate the model training time on multi-node NVIDIA GPUs for transformer models with a one-line addition for existing PyTorch training scripts. [Learn more &rarr;](https://www.onnxruntime.ai/docs/#onnx-runtime-for-training)
+```bash
+git clone --recursive git@github.com:SamuelGong/onnxruntime.git  # may take ten minutes to finish
+git submodule update --init --recursive 
+```
 
-## Get Started & Resources
+*This means that the branch you use should be no older than v1.22.2.*
 
-* **General Information**: [onnxruntime.ai](https://onnxruntime.ai)
+## 2. Compile for MacBook (Apple Silicon) on MacBook (Apple Silicon)
 
-* **Usage documentation and tutorials**: [onnxruntime.ai/docs](https://onnxruntime.ai/docs)
+```bash
+brew install cmake ninja
+```
 
-* **YouTube video tutorials**: [youtube.com/@ONNXRuntime](https://www.youtube.com/@ONNXRuntime)
+### 2.1 Normal build
 
-* [**Upcoming Release Roadmap**](https://onnxruntime.ai/roadmap)
+```bash
+# to avoid the use of system/conda's protobuf
+conda deactivate
+brew uninstall protobuf
 
-* **Companion sample repositories**:
-  - ONNX Runtime Inferencing: [microsoft/onnxruntime-inference-examples](https://github.com/microsoft/onnxruntime-inference-examples)
-  - ONNX Runtime Training: [microsoft/onnxruntime-training-examples](https://github.com/microsoft/onnxruntime-training-examples)
+# may need to set up proxy (export http_proxy=... && export https_proxy=... ) if there is network issue
 
-## Releases
+rm -rf build_macos_arm64/Release
+./build.sh \
+  --config Release \
+  --build_shared_lib \
+  --parallel \
+  --compile_no_warning_as_error \
+  --skip_submodule_sync \
+  --build_dir build_macos_arm64 \
+  --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=arm64 \
+  --cmake_extra_defines CMAKE_IGNORE_PATH=/opt/homebrew
 
-The current release and past releases can be found here: https://github.com/microsoft/onnxruntime/releases.
+cd build_macos_arm64/Release
+cmake --install . --prefix "$(pwd)/install"
+```
 
-For details on the upcoming release, including release dates, announcements, features, and guidance on submitting feature requests, please visit the release roadmap: https://onnxruntime.ai/roadmap.
+### 2.2 Build minimal CPU-only library
 
-## Data/Telemetry
+```bash
+# may need to set up proxy (export http_proxy=... && export https_proxy=... ) if there is network issue
 
-Windows distributions of this project may collect usage data and send it to Microsoft to help improve our products and services. See the [privacy statement](docs/Privacy.md) for more details.
+python3.13 -m venv ~/venvs/ortbuild  # the Python in the environment should be >= 3.12, otherwise will have syntax errors
+source ~/venvs/ortbuild/bin/activate
+python -m pip install --upgrade pip
+python -m pip install flatbuffers
 
-## Contributions and Feedback
+rm -rf build_macos_arm64/MinSizeRel
+./build.sh \
+  --config MinSizeRel \
+  --build_shared_lib \
+  --parallel \
+  --compile_no_warning_as_error \
+  --skip_submodule_sync \
+  --build_dir build_macos_arm64 \
+  --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=arm64 \
+  --cmake_extra_defines CMAKE_IGNORE_PATH=/opt/homebrew \
+  --skip_tests \
+  --minimal_build \
+  --disable_ml_ops \
+  --include_ops_by_config /Users/samuel/Repositories/code/LookOnceToHear/harmony_deploy/required_operators_and_types.config
+ 
+cd build_macos_arm64/MinSizeRel
+cmake --install . --prefix "$(pwd)/install"
 
-We welcome contributions! Please see the [contribution guidelines](CONTRIBUTING.md).
+deactivate
+# conda activate
+```
 
-For feature requests or bug reports, please file a [GitHub Issue](https://github.com/Microsoft/onnxruntime/issues).
-
-For general discussion or questions, please use [GitHub Discussions](https://github.com/microsoft/onnxruntime/discussions).
-
-## Code of Conduct
-
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/)
-or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
+Why these changes
+* `--build_dir build_macos_arm64_min`: keep this minimal build isolated from your full build. 
+* `--minimal_build` (no “extended”): for CPU EP it’s the smallest. “Extended” is for EPs that need dynamic kernel creation (CoreML/XNNPACK/etc.). If you later add those, switch to extended. 
+* `--include_ops_by_config <file>`: trims kernels down to just what your models need. 
+* `--enable_reduced_operator_type_support`: strips unneeded tensor dtypes for included ops. 
+* `--disable_ml_ops`: drops ai.onnx.ml domain; keep it only if your config needs ML ops (LabelEncoder, etc.). If your config includes any ai.onnx.ml ops, remove this flag.
+* `MinSizeRel`: enables size-oriented optimizations with symbols off—good default for tiny builds.
