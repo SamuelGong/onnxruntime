@@ -108,6 +108,7 @@ rm -rf build_macos_arm64/MinSizeRel
   --skip_tests \
   --minimal_build \
   --disable_ml_ops \
+  --enable_reduced_operator_type_support \
   --include_ops_by_config $OP_CONFIG
  
 cd build_macos_arm64/MinSizeRel
@@ -198,10 +199,12 @@ brew install cmake ninja
 ### Case B.1 Normal build
 
 ```bash
+# may need to set up proxy (export http_proxy=... && export https_proxy=... ) if there is network issue
+
 mkdir -p build_ohos_arm64/Release
 cd build_ohos_arm64/Release
 
-cmake -S ../cmake \
+cmake -S ../../cmake \
   -B . \
   -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
@@ -217,6 +220,7 @@ cmake -S ../cmake \
   -DCMAKE_CXX_FLAGS="-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument -Xclang -target-feature -fno-emulated-tls -Xclang +bf16 -include $ORT_PATH" \
   -DCMAKE_ASM_FLAGS="-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument -Xclang -target-feature -Xclang +bf16"
 
+cmake --build . --parallel
 cmake --install . --prefix "$(pwd)/install"
 ```
 
@@ -259,3 +263,48 @@ build_ohos_arm64/Release/install
 ```
 
 In particular, one can copy `build_ohos_arm64/Release/install/lib` together with `build_ohos_arm64/Release/install/include` for later compilation use.
+
+### Case B.2 Minimal build
+
+```bash
+# may need to set up proxy (export http_proxy=... && export https_proxy=... ) if there is network issue
+
+mkdir -p build_ohos_arm64/MinSizeRel
+cd build_ohos_arm64/MinSizeRel
+
+cmake -S ../../cmake \
+  -B . \
+  -G Ninja \
+  -DCMAKE_BUILD_TYPE=MinSizeRel \
+  -DCMAKE_TOOLCHAIN_FILE="$NDK_PATH/build/cmake/ohos.toolchain.cmake" \
+  -DOHOS_ARCH=arm64-v8a \
+  -DOHOS_STL=c++_shared \
+  -Donnxruntime_BUILD_SHARED_LIB=ON \
+  -Donnxruntime_ENABLE_PYTHON=OFF \
+  -Donnxruntime_BUILD_UNIT_TESTS=OFF \
+  -Donnxruntime_RUN_ONNX_TESTS=OFF \
+  -Donnxruntime_ENABLE_CPUINFO=OFF \
+  -Donnxruntime_MINIMAL_BUILD=ON \
+  -Donnxruntime_DISABLE_ML_OPS=ON \
+  -Donnxruntime_ENABLE_REDUCED_OPERATOR_TYPE_SUPPORT=ON \
+  -Donnxruntime_INCLUDE_OPS_BY_CONFIG="$OP_CONFIG" \
+  -DCMAKE_C_FLAGS="-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument -Xclang -target-feature -fno-emulated-tls -Xclang +bf16" \
+  -DCMAKE_CXX_FLAGS="-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument -Xclang -target-feature -fno-emulated-tls -Xclang +bf16 -include $ORT_PATH" \
+  -DCMAKE_ASM_FLAGS="-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument -Xclang -target-feature -Xclang +bf16"
+
+cmake --build . --parallel
+cmake --install . --prefix "$(pwd)/install"
+```
+
+**Remark**: Upon failure, one should remove the built intermediate files using `rm -rf CMakeCache.txt CMakeFiles _deps` before running `cmake -S` and `cmake --build`.
+
+<details> <summary><b>Example file output (Tab here to expand)</b></summary>
+
+```
+build_ohos_arm64/MinSizeRel/install
+
+```
+
+</details>
+
+In particular, one can copy `build_ohos_arm64/MinSizeRel/install/lib` together with `build_ohos_arm64/MinSizeRel/install/include` for later compilation use.
