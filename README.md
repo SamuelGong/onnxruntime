@@ -114,7 +114,7 @@ cd build_macos_arm64/MinSizeRel
 cmake --install . --prefix "$(pwd)/install"
 ```
 
-Remarks:
+**Remarks**:
 * `--minimal_build`: for CPU EP it’s the smallest.
 * `--include_ops_by_config <file>`: trims kernels down to just what your models need. 
 * `--enable_reduced_operator_type_support`: strips unneeded tensor dtypes for included ops. 
@@ -198,8 +198,8 @@ brew install cmake ninja
 ### Case B.1 Normal build
 
 ```bash
-mkdir -p build_ohos_arm64
-cd build_ohos_arm64
+mkdir -p build_ohos_arm64/Release
+cd build_ohos_arm64/Release
 
 cmake -S ../cmake \
   -B . \
@@ -216,4 +216,46 @@ cmake -S ../cmake \
   -DCMAKE_C_FLAGS="-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument -Xclang -target-feature -fno-emulated-tls -Xclang +bf16" \
   -DCMAKE_CXX_FLAGS="-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument -Xclang -target-feature -fno-emulated-tls -Xclang +bf16 -include $ORT_PATH" \
   -DCMAKE_ASM_FLAGS="-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument -Xclang -target-feature -Xclang +bf16"
+
+cmake --install . --prefix "$(pwd)/install"
 ```
+
+**Remark**: Upon failure, one should remove the built intermediate files using `rm -rf CMakeCache.txt CMakeFiles _deps` before running `cmake -S` and `cmake --build`.
+
+<details> <summary><b>Example file output (Tab here to expand)</b></summary>
+
+```
+build_ohos_arm64/Release/install
+├── include
+│   └── onnxruntime
+│       ├── core
+│       │   └── providers
+│       │       ├── custom_op_context.h
+│       │       └── resource.h
+│       ├── cpu_provider_factory.h
+│       ├── onnxruntime_c_api.h
+│       ├── onnxruntime_cxx_api.h
+│       ├── onnxruntime_cxx_inline.h
+│       ├── onnxruntime_ep_c_api.h
+│       ├── onnxruntime_ep_device_ep_metadata_keys.h
+│       ├── onnxruntime_float16.h
+│       ├── onnxruntime_lite_custom_op.h
+│       ├── onnxruntime_run_options_config_keys.h
+│       ├── onnxruntime_session_options_config_keys.h
+│       └── provider_options.h
+└── lib
+    ├── cmake
+    │   └── onnxruntime
+    │       ├── onnxruntimeConfig.cmake
+    │       ├── onnxruntimeConfigVersion.cmake
+    │       ├── onnxruntimeTargets-release.cmake
+    │       └── onnxruntimeTargets.cmake
+    ├── libonnxruntime.so -> libonnxruntime.so.1
+    ├── libonnxruntime.so.1 -> libonnxruntime.so.1.23.0
+    ├── libonnxruntime.so.1.23.0
+    ├── libonnxruntime_providers_shared.so
+    └── pkgconfig
+        └── libonnxruntime.pc
+```
+
+In particular, one can copy `build_ohos_arm64/Release/install/lib` together with `build_ohos_arm64/Release/install/include` for later compilation use.
