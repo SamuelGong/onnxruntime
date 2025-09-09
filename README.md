@@ -157,6 +157,8 @@ build_macos_arm64/MinSizeRel/install
         └── libonnxruntime.pc
 ```
 
+</details>
+
 In particular, one can copy `build_macos_arm64/MinSizeRel/install/lib` together with `build_macos_arm64/MinSizeRel/install/include` for later compilation use.
 
 ## Case B: Compile for HarmonyOS (Mate 60/70 Pro) on MacBook (Apple Silicon)
@@ -261,6 +263,8 @@ build_ohos_arm64/Release/install
     └── pkgconfig
         └── libonnxruntime.pc
 ```
+
+</details>
 
 In particular, one can copy `build_ohos_arm64/Release/install/lib` together with `build_ohos_arm64/Release/install/include` for later compilation use.
 
