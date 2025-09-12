@@ -1,6 +1,6 @@
 # Zhifeng's Guidance
 
-[This](./README-original.md) is the original README for the LookOnceToHear project
+[This](./README-original.md) is the original README for the onnxruntime project
 
 ## 1. Common Steps
 
@@ -25,27 +25,28 @@ brew install cmake ninja
 conda deactivate
 brew uninstall protobuf
 
-# may need to set up proxy (export http_proxy=... && export https_proxy=... ) if there is network issue
+# may need to set up proxy (export http_proxy=... && export https_proxy=... ) 
+# if there is any network issue
 
-rm -rf build_macos_arm64/Release
+rm -rf build_macos_arm64/tiger/Release
 ./build.sh \
   --config Release \
   --build_shared_lib \
   --parallel \
   --compile_no_warning_as_error \
   --skip_submodule_sync \
-  --build_dir build_macos_arm64 \
+  --build_dir build_macos_arm64/tiger \
   --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=arm64 \
   --cmake_extra_defines CMAKE_IGNORE_PATH=/opt/homebrew
 
-cd build_macos_arm64/Release
+cd build_macos_arm64/tiger/Release
 cmake --install . --prefix "$(pwd)/install"
 ```
 
 <details> <summary><b>Example file output (Tab here to expand)</b></summary>
 
 ```
-build_macos_arm64/Release/install
+build_macos_arm64/tiger/Release/install
 ├── bin
 │   └── onnx_test_runner
 ├── include
@@ -78,7 +79,7 @@ build_macos_arm64/Release/install
         └── libonnxruntime.pc
 ```
 
-In particular, one can copy `build_macos_arm64/Release/install/lib` together with `build_macos_arm64/Release/install/include` for later compilation use.
+In particular, one can copy `build_macos_arm64/tiger/Release/install/lib` together with `build_macos_arm64/tiger/Release/install/include` for later compilation use.
 
 </details>
 
@@ -88,21 +89,23 @@ Make sure you have converted your onnx models and get the merged version of conf
 Let's assume the absolute path to that merged file is `$OP_CONFIG` (e.g., `/Users/samuel/Repositories/code/LookOnceToHear/harmony_deploy/required_operators_and_types.config`).
 
 ```bash
-# may need to set up proxy (export http_proxy=... && export https_proxy=... ) if there is network issue
+# may need to set up proxy (export http_proxy=... && export https_proxy=... ) 
+# if there is network issue
 
+conda deactivate
 python3.13 -m venv ~/venvs/ortbuild  # the Python in the environment should be >= 3.12, otherwise will have syntax errors
 source ~/venvs/ortbuild/bin/activate
 python -m pip install --upgrade pip
 python -m pip install flatbuffers
 
-rm -rf build_macos_arm64/MinSizeRel
+rm -rf build_macos_arm64/tiger/MinSizeRel
 ./build.sh \
   --config MinSizeRel \
   --build_shared_lib \
   --parallel \
   --compile_no_warning_as_error \
   --skip_submodule_sync \
-  --build_dir build_macos_arm64 \
+  --build_dir build_macos_arm64/tiger \
   --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=arm64 \
   --cmake_extra_defines CMAKE_IGNORE_PATH=/opt/homebrew \
   --skip_tests \
@@ -110,8 +113,8 @@ rm -rf build_macos_arm64/MinSizeRel
   --disable_ml_ops \
   --enable_reduced_operator_type_support \
   --include_ops_by_config $OP_CONFIG
- 
-cd build_macos_arm64/MinSizeRel
+
+cd build_macos_arm64/tiger/MinSizeRel
 cmake --install . --prefix "$(pwd)/install"
 ```
 
@@ -124,7 +127,7 @@ cmake --install . --prefix "$(pwd)/install"
 <details> <summary><b>Example file output (Tab here to expand)</b></summary>
 
 ```
-build_macos_arm64/MinSizeRel/install
+build_macos_arm64/tiger/MinSizeRel/install
 ├── bin
 │   └── onnx_test_runner
 ├── include
@@ -159,7 +162,7 @@ build_macos_arm64/MinSizeRel/install
 
 </details>
 
-In particular, one can copy `build_macos_arm64/MinSizeRel/install/lib` together with `build_macos_arm64/MinSizeRel/install/include` for later compilation use.
+In particular, one can copy `build_macos_arm64/tiger/MinSizeRel/install/lib` together with `build_macos_arm64/tiger/MinSizeRel/install/include` for later compilation use.
 
 ## Case B: Compile for HarmonyOS (Mate 60/70 Pro) on MacBook (Apple Silicon)
 
