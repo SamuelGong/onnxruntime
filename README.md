@@ -28,6 +28,7 @@ brew uninstall protobuf
 # may need to set up proxy (export http_proxy=... && export https_proxy=... ) 
 # if there is any network issue
 
+# be sure that ORT_PATH and NDK_PATH are all properly configured
 rm -rf build_macos_arm64/tiger/Release
 ./build.sh \
   --config Release \
@@ -86,7 +87,8 @@ In particular, one can copy `build_macos_arm64/tiger/Release/install/lib` togeth
 ### Case A.2 Minimal Build
 
 Make sure you have converted your onnx models and get the merged version of configuration files.
-Let's assume the absolute path to that merged file is `$OP_CONFIG` (e.g., `/Users/samuel/Repositories/code/LookOnceToHear/harmony_deploy/required_operators_and_types.config`).
+Let's assume the absolute path to that merged file is `$OP_CONFIG` (e.g., `/Users/samuel/Repositories/code/TIGER/harmony_deploy/required_operators_and_types.config` 
+or `/Users/samuel/Repositories/code/TIGER/harmony_deploy_stream/required_operators_and_types.config`).
 
 ```bash
 # may need to set up proxy (export http_proxy=... && export https_proxy=... ) 
@@ -99,6 +101,8 @@ python -m pip install --upgrade pip
 python -m pip install flatbuffers
 
 rm -rf build_macos_arm64/tiger/MinSizeRel
+# be sure that ORT_PATH, NDK_PATH, and OP_CONFIG are all properly configured
+# before you proceed!
 ./build.sh \
   --config MinSizeRel \
   --build_shared_lib \
@@ -206,10 +210,12 @@ brew install cmake ninja
 ```bash
 # may need to set up proxy (export http_proxy=... && export https_proxy=... ) if there is network issue
 
-mkdir -p build_ohos_arm64/Release
-cd build_ohos_arm64/Release
+mkdir -p build_ohos_arm64/tiger/Release
+cd build_ohos_arm64/tiger/Release
 
-cmake -S ../../cmake \
+# be sure that ORT_PATH and NDK_PATH are all properly configured
+# before you proceed!
+cmake -S ../../../cmake -B \
   -B . \
   -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
@@ -234,7 +240,7 @@ cmake --install . --prefix "$(pwd)/install"
 <details> <summary><b>Example file output (Tab here to expand)</b></summary>
 
 ```
-build_ohos_arm64/Release/install
+build_ohos_arm64/tiger/Release/install
 ├── include
 │   └── onnxruntime
 │       ├── core
@@ -269,18 +275,20 @@ build_ohos_arm64/Release/install
 
 </details>
 
-In particular, one can copy `build_ohos_arm64/Release/install/lib` together with `build_ohos_arm64/Release/install/include` for later compilation use.
+In particular, one can copy `build_ohos_arm64/tiger/Release/install/lib` together with `build_ohos_arm64/tiger/Release/install/include` for later compilation use.
 
 ### Case B.2 Minimal build
 
 ```bash
 # may need to set up proxy (export http_proxy=... && export https_proxy=... ) if there is network issue
 
-mkdir -p build_ohos_arm64/MinSizeRel
-cd build_ohos_arm64/MinSizeRel
+rm -rf build_ohos_arm64/tiger/MinSizeRel
+mkdir -p build_ohos_arm64/tiger/MinSizeRel
+cd build_ohos_arm64/tiger/MinSizeRel
 
-cmake -S ../../cmake \
-  -B . \
+# be sure that ORT_PATH, NDK_PATH, and OP_CONFIG are all properly configured
+# before you proceed!
+cmake -S ../../../cmake -B . \
   -G Ninja \
   -DCMAKE_BUILD_TYPE=MinSizeRel \
   -DCMAKE_TOOLCHAIN_FILE="$NDK_PATH/build/cmake/ohos.toolchain.cmake" \
@@ -308,10 +316,89 @@ cmake --install . --prefix "$(pwd)/install"
 <details> <summary><b>Example file output (Tab here to expand)</b></summary>
 
 ```
-build_ohos_arm64/MinSizeRel/install
+build_ohos_arm64/tiger/MinSizeRel/install
 
 ```
 
 </details>
 
-In particular, one can copy `build_ohos_arm64/MinSizeRel/install/lib` together with `build_ohos_arm64/MinSizeRel/install/include` for later compilation use.
+In particular, one can copy `build_ohos_arm64/tiger/MinSizeRel/install/lib` together with `build_ohos_arm64/tiger/MinSizeRel/install/include` for later compilation use.
+
+## Case C: Compile for Android (OnePlus 13) on MacBook (Apple Silicon)
+
+Make sure you have Android NDK installed, and the absolute path to it is `$ANDROID_NDK` (e.g., `/Users/samuel/Library/Android/sdk/ndk/29.0.14206865`)
+
+Prerequisites:
+
+```bash
+brew install cmake ninja
+```
+
+### Case C.1 Normal build
+
+```bash
+# may need to set up proxy (export http_proxy=... && export https_proxy=... ) if there is network issue
+
+mkdir -p build_android_arm64
+
+cmake -S cmake \
+  -B build_android_arm64 \
+  -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK/build/cmake/android.toolchain.cmake" \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DOHOS_ARCH=arm64-v8a \
+  -DOHOS_STL=c++_shared \
+  -Donnxruntime_BUILD_SHARED_LIB=ON \
+  -Donnxruntime_ENABLE_PYTHON=OFF \
+  -Donnxruntime_BUILD_UNIT_TESTS=OFF \
+  -Donnxruntime_RUN_ONNX_TESTS=OFF \
+  -Donnxruntime_ENABLE_CPUINFO=OFF \
+  -DCMAKE_C_FLAGS="-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument -Xclang -target-feature -fno-emulated-tls -Xclang +bf16" \
+  -DCMAKE_CXX_FLAGS="-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument -Xclang -target-feature -fno-emulated-tls -Xclang +bf16" \
+  -DCMAKE_ASM_FLAGS="-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument -Xclang -target-feature -Xclang +bf16"
+
+cmake --build build_android_arm64 --parallel
+cmake --install build_android_arm64 --prefix "build_android_arm64/install"
+```
+
+**Remark**: Upon failure, one should remove the built intermediate files using `rm -rf CMakeCache.txt CMakeFiles _deps` before running `cmake -S` and `cmake --build`.
+
+<details> <summary><b>Example file output (Tab here to expand)</b></summary>
+
+```
+build_ohos_arm64/tiger/Release/install
+├── include
+│   └── onnxruntime
+│       ├── core
+│       │   └── providers
+│       │       ├── custom_op_context.h
+│       │       └── resource.h
+│       ├── cpu_provider_factory.h
+│       ├── onnxruntime_c_api.h
+│       ├── onnxruntime_cxx_api.h
+│       ├── onnxruntime_cxx_inline.h
+│       ├── onnxruntime_ep_c_api.h
+│       ├── onnxruntime_ep_device_ep_metadata_keys.h
+│       ├── onnxruntime_float16.h
+│       ├── onnxruntime_lite_custom_op.h
+│       ├── onnxruntime_run_options_config_keys.h
+│       ├── onnxruntime_session_options_config_keys.h
+│       └── provider_options.h
+└── lib
+    ├── cmake
+    │   └── onnxruntime
+    │       ├── onnxruntimeConfig.cmake
+    │       ├── onnxruntimeConfigVersion.cmake
+    │       ├── onnxruntimeTargets-release.cmake
+    │       └── onnxruntimeTargets.cmake
+    ├── libonnxruntime.so -> libonnxruntime.so.1
+    ├── libonnxruntime.so.1 -> libonnxruntime.so.1.23.0
+    ├── libonnxruntime.so.1.23.0
+    ├── libonnxruntime_providers_shared.so
+    └── pkgconfig
+        └── libonnxruntime.pc
+```
+
+</details>
+
+In particular, one can copy `build_ohos_arm64/tiger/Release/install/lib` together with `build_ohos_arm64/tiger/Release/install/include` for later compilation use.
