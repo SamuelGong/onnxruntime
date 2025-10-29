@@ -326,7 +326,8 @@ In particular, one can copy `build_ohos_arm64/tiger/MinSizeRel/install/lib` toge
 
 ## Case C: Compile for Android (OnePlus 13) on MacBook (Apple Silicon)
 
-Make sure you have Android NDK installed, and the absolute path to it is `$ANDROID_NDK` (e.g., `/Users/samuel/Library/Android/sdk/ndk/29.0.14206865`)
+Make sure you have Android studio and NDK installed, and the absolute path to SDK is `$ANDROID_SDK_ROOT` (e.g., `/Users/samuel/Library/Android/sdk`) 
+and to NDK is `$ANDROID_NDK` (e.g., `/Users/samuel/Library/Android/sdk/ndk/29.0.14206865`)
 
 Prerequisites:
 
@@ -336,37 +337,49 @@ brew install cmake ninja
 
 ### Case C.1 Normal build
 
+One need to use a clean Python environment.
+If you are currently in a conda environment, exit it via and enter a clean one:
+
 ```bash
-# may need to set up proxy (export http_proxy=... && export https_proxy=... ) if there is network issue
-
-mkdir -p build_android_arm64
-
-cmake -S cmake \
-  -B build_android_arm64 \
-  -G Ninja \
-  -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK/build/cmake/android.toolchain.cmake" \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DOHOS_ARCH=arm64-v8a \
-  -DOHOS_STL=c++_shared \
-  -Donnxruntime_BUILD_SHARED_LIB=ON \
-  -Donnxruntime_ENABLE_PYTHON=OFF \
-  -Donnxruntime_BUILD_UNIT_TESTS=OFF \
-  -Donnxruntime_RUN_ONNX_TESTS=OFF \
-  -Donnxruntime_ENABLE_CPUINFO=OFF \
-  -DCMAKE_C_FLAGS="-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument -Xclang -target-feature -fno-emulated-tls -Xclang +bf16" \
-  -DCMAKE_CXX_FLAGS="-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument -Xclang -target-feature -fno-emulated-tls -Xclang +bf16" \
-  -DCMAKE_ASM_FLAGS="-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument -Xclang -target-feature -Xclang +bf16"
-
-cmake --build build_android_arm64 --parallel
-cmake --install build_android_arm64 --prefix "build_android_arm64/install"
+conda deactivate
+python3.13 -m venv ~/venvs/ortbuild  # the Python in the environment should be >= 3.12, otherwise will have syntax errors
+source ~/venvs/ortbuild/bin/activate
+python -m pip install --upgrade pip
+python -m pip install flatbuffers
 ```
 
-**Remark**: Upon failure, one should remove the built intermediate files using `rm -rf CMakeCache.txt CMakeFiles _deps` before running `cmake -S` and `cmake --build`.
+Then the main steps are:
+
+```bash
+# may need to set up proxy (export http_proxy=... && export https_proxy=... ) if there is network issue
+export API=26
+rm -rf build_android_arm64 && mkdir -p build_android_arm64
+
+./build.sh \
+  --android \
+  --android_abi=arm64-v8a \
+  --android_api="$API" \
+  --android_ndk_path="$ANDROID_NDK" \
+  --android_sdk_path="$ANDROID_SDK_ROOT" \
+  --config Release \
+  --build_shared_lib \
+  --skip_tests \
+  --parallel \
+  --update \
+  --build \
+  --build_dir build_android_arm64 \
+  --cmake_extra_defines CMAKE_ANDROID_STL_TYPE=c++_shared
+# a bit slow, just wait for the build to finish
+
+cmake --install build_android_arm64/Release --prefix "build_android_arm64/Release/install"
+```
 
 <details> <summary><b>Example file output (Tab here to expand)</b></summary>
 
 ```
-build_ohos_arm64/tiger/Release/install
+build_android_arm64/Release/install
+├── bin
+│   └── onnx_test_runner
 ├── include
 │   └── onnxruntime
 │       ├── core
@@ -391,14 +404,11 @@ build_ohos_arm64/tiger/Release/install
     │       ├── onnxruntimeConfigVersion.cmake
     │       ├── onnxruntimeTargets-release.cmake
     │       └── onnxruntimeTargets.cmake
-    ├── libonnxruntime.so -> libonnxruntime.so.1
-    ├── libonnxruntime.so.1 -> libonnxruntime.so.1.23.0
-    ├── libonnxruntime.so.1.23.0
-    ├── libonnxruntime_providers_shared.so
+    ├── libonnxruntime.so
     └── pkgconfig
         └── libonnxruntime.pc
 ```
 
 </details>
 
-In particular, one can copy `build_ohos_arm64/tiger/Release/install/lib` together with `build_ohos_arm64/tiger/Release/install/include` for later compilation use.
+In particular, one can copy `build_android_arm64/Release/install/lib` together with `build_android_arm64/Release/install/include` for later compilation use.
